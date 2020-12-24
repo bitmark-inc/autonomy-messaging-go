@@ -18,7 +18,8 @@ import (
 )
 
 const (
-	preKeyMinimumCount = 35
+	preKeyMinimumInventoryCount = 35
+	preKeyGenerationCount       = 100
 )
 
 type PrivateKeyStore interface {
@@ -46,7 +47,7 @@ func (c *Client) Init() {
 
 }
 
-func (c *Client) RegisterKeys(count int) error {
+func (c *Client) RegisterKeys() error {
 	identityKey, err := c.identityStore.GetIdentityKeyPair()
 	if err != nil {
 		switch err {
@@ -77,7 +78,7 @@ func (c *Client) RegisterKeys(count int) error {
 	if err != nil {
 		return err
 	}
-	if inventoryCount > preKeyMinimumCount {
+	if inventoryCount >= preKeyMinimumInventoryCount {
 		return nil
 	}
 
@@ -85,8 +86,7 @@ func (c *Client) RegisterKeys(count int) error {
 	nextPreKeyID := randID()
 
 	preKeys := make([]PreKey, 0)
-	fmt.Println(count)
-	for i := 0; i < count; i++ {
+	for i := 0; i < preKeyGenerationCount; i++ {
 		id := nextPreKeyID
 		preKey := axolotl.NewECKeyPair()
 		preKeyRecord := &axolotl.PreKeyRecord{
