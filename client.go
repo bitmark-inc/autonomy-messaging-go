@@ -43,10 +43,6 @@ func New(httpClient *http.Client, endpoint, username, password, storePath string
 	return &Client{username, apiClient, store, store, store, store, store}
 }
 
-func (c *Client) Init() {
-
-}
-
 func (c *Client) RegisterKeys() error {
 	identityKey, err := c.identityStore.GetIdentityKeyPair()
 	if err != nil {
@@ -103,7 +99,6 @@ func (c *Client) RegisterKeys() error {
 		nextPreKeyID += 1
 		preKeys = append(preKeys, PreKey{ID: id, PublicKey: preKey.PublicKey.Key()[:]})
 	}
-	fmt.Println(preKeys)
 
 	// generate signed pre key
 	ts := uint64(time.Now().UTC().Second())
@@ -130,8 +125,6 @@ func (c *Client) RegisterKeys() error {
 	if err := c.apiClient.addKeys(context.Background(), identityKey.PublicKey.Key()[:], preKeys, signedPreKey); err != nil {
 		return err
 	}
-
-	fmt.Println(identityKey, preKeys, signedPreKey, err)
 
 	return nil
 }
