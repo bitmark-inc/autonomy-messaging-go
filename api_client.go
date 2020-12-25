@@ -25,9 +25,12 @@ const (
 type apiClient struct {
 	httpClient *http.Client
 	endpoint   string
-	username   string
-	password   string
+	jwt        string
 	log        *logrus.Entry
+}
+
+type AccountAttributes struct {
+	RegistrationID uint32 `json:"registrationId"`
 }
 
 type PrekeyState struct {
@@ -70,12 +73,11 @@ type Message struct {
 	ServerTimestamp    int64     `json:"serverTimestamp"`
 }
 
-func newAPIClient(httpClient *http.Client, endpoint, username, password string) *apiClient {
+func newAPIClient(httpClient *http.Client, endpoint, jwt string) *apiClient {
 	return &apiClient{
 		httpClient: httpClient,
 		endpoint:   endpoint,
-		username:   username,
-		password:   password,
+		jwt:        jwt,
 		log:        logrus.WithField("prefix", "messaging_api"),
 	}
 }
@@ -91,10 +93,46 @@ func (c *apiClient) createRequest(ctx context.Context, method, path string, body
 		return nil, err
 	}
 
-	req.SetBasicAuth(c.username, c.password)
+	req.Header.Set("Authorization", "Basic "+c.jwt)
 	req.Header.Set("Content-Type", "application/json")
 
 	return req, nil
+}
+
+func (c *apiClient) registerAccount(ctx context.Context, registrationID uint32) error {
+	body := struct {
+		SignalAccountAttributes AccountAttributes `json:"signal_account_attributes"`
+	}{
+		AccountAttributes{RegistrationID: registrationID},
+	}
+
+	req, err := c.createRequest(ctx, "POST", "/accounts?disableproxy=true", body)
+	if err != nil {
+		return err
+	}
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return err
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		dumpedRequest, err := httputil.DumpRequest(req, true)
+		if err != nil {
+			c.log.Error("unable to dump the request")
+		}
+		c.log.WithField("req", string(dumpedRequest)).Debug("unable to create the messaging account")
+
+		dumpedResponse, err := httputil.DumpResponse(resp, true)
+		if err != nil {
+			c.log.Error("unable to dump the response")
+		}
+		c.log.WithContext(ctx).WithField("resp", string(dumpedResponse)).Debug("unable to create the messaging account")
+
+		return errors.New("unable to create the messaging account")
+	}
+
+	return nil
 }
 
 func (c *apiClient) addKeys(ctx context.Context, identityKey []byte, preKeys []PreKey, signedPreKey SignedPreKey) error {

@@ -28,7 +28,7 @@ type PrivateKeyStore interface {
 }
 
 type Client struct {
-	username          string
+	// jwt               string
 	apiClient         *apiClient
 	privateKeyStore   PrivateKeyStore
 	identityStore     axolotl.IdentityStore
@@ -37,10 +37,27 @@ type Client struct {
 	sessionStore      axolotl.SessionStore
 }
 
-func New(httpClient *http.Client, endpoint, username, password, storePath string) *Client {
-	apiClient := newAPIClient(httpClient, endpoint, username, password)
+func New(httpClient *http.Client, endpoint, jwt, storePath string) *Client {
+	apiClient := newAPIClient(httpClient, endpoint, jwt)
 	store := newLevelDBAxolotlStore(storePath)
-	return &Client{username, apiClient, store, store, store, store, store}
+	return &Client{apiClient, store, store, store, store, store}
+}
+
+func (c *Client) RegisterAccount() error {
+	registrationID, err := c.identityStore.GetLocalRegistrationID()
+	if err != nil {
+		switch err {
+		case leveldb.ErrNotFound:
+			registrationID = generateRegistrationID()
+			if err := c.privateKeyStore.StoreRegistrationID(registrationID); err != nil {
+				return err
+			}
+		default:
+			return err
+		}
+	}
+
+	return c.apiClient.registerAccount(context.Background(), registrationID)
 }
 
 func (c *Client) RegisterKeys() error {
@@ -50,19 +67,6 @@ func (c *Client) RegisterKeys() error {
 		case leveldb.ErrNotFound:
 			identityKey = axolotl.GenerateIdentityKeyPair()
 			if err := c.privateKeyStore.StoreIdentityKeyPair(identityKey); err != nil {
-				return err
-			}
-		default:
-			return err
-		}
-	}
-
-	_, err = c.identityStore.GetLocalRegistrationID()
-	if err != nil {
-		switch err {
-		case leveldb.ErrNotFound:
-			// TODO: MAKE 1
-			if err := c.privateKeyStore.StoreRegistrationID(1); err != nil {
 				return err
 			}
 		default:
@@ -229,6 +233,10 @@ func (c *Client) DeleteMessage(guid uuid.UUID) error {
 	// c.apiClient.
 
 	return nil
+}
+
+func generateRegistrationID() uint32 {
+	return randUint32() & 0x3fff
 }
 
 func randID() uint32 {
