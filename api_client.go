@@ -93,7 +93,7 @@ func (c *apiClient) createRequest(ctx context.Context, method, path string, body
 		return nil, err
 	}
 
-	req.Header.Set("Authorization", "Bear "+c.jwt)
+	req.Header.Set("Authorization", "Bearer "+c.jwt)
 	req.Header.Set("Content-Type", "application/json")
 
 	return req, nil
