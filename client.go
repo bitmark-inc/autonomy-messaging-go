@@ -28,7 +28,6 @@ type PrivateKeyStore interface {
 }
 
 type Client struct {
-	// jwt               string
 	apiClient         *apiClient
 	privateKeyStore   PrivateKeyStore
 	identityStore     axolotl.IdentityStore

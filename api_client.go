@@ -106,7 +106,7 @@ func (c *apiClient) registerAccount(ctx context.Context, registrationID uint32) 
 		AccountAttributes{RegistrationID: registrationID},
 	}
 
-	req, err := c.createRequest(ctx, "POST", "/accounts?disableproxy=true", body)
+	req, err := c.createRequest(ctx, "POST", "/accounts?disableproxy=true&disablewallet=true", body)
 	if err != nil {
 		return err
 	}
