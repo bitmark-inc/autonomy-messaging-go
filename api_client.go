@@ -308,3 +308,28 @@ func (c *apiClient) getMessages(ctx context.Context) ([]*Message, bool, error) {
 
 	return response.Messages, response.More, nil
 }
+
+func (c *apiClient) deleteMessage(ctx context.Context, guid uuid.UUID) error {
+	req, err := c.createRequest(ctx, "DELETE", fmt.Sprintf("/api/messaging/messages/uuid/%s", guid.String()), nil)
+	if err != nil {
+		return err
+	}
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		dumpedResponse, err := httputil.DumpResponse(resp, true)
+		if err != nil {
+			c.log.Error("unable to dump the response")
+		}
+		c.log.WithContext(ctx).WithField("resp", string(dumpedResponse)).Debug("unable to delete the message")
+
+		return errors.New("unable to delete the message")
+	}
+
+	return nil
+}

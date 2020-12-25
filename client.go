@@ -10,7 +10,7 @@ import (
 	"net/http"
 	"time"
 
-	uuid "github.com/jackc/pgtype/ext/gofrs-uuid"
+	"github.com/google/uuid"
 	"github.com/signal-golang/textsecure/axolotl"
 	protobuf "github.com/signal-golang/textsecure/axolotl/protobuf"
 	"github.com/signal-golang/textsecure/curve25519sign"
@@ -229,9 +229,7 @@ func (c *Client) ReceiveMessages() ([]*Message, bool, error) {
 }
 
 func (c *Client) DeleteMessage(guid uuid.UUID) error {
-	// c.apiClient.
-
-	return nil
+	return c.apiClient.deleteMessage(context.Background(), guid)
 }
 
 func generateRegistrationID() uint32 {
