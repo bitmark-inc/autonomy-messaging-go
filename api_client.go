@@ -93,7 +93,7 @@ func (c *apiClient) createRequest(ctx context.Context, method, path string, body
 		return nil, err
 	}
 
-	req.Header.Set("Authorization", "Basic "+c.jwt)
+	req.Header.Set("Authorization", "Bear "+c.jwt)
 	req.Header.Set("Content-Type", "application/json")
 
 	return req, nil
@@ -102,11 +102,13 @@ func (c *apiClient) createRequest(ctx context.Context, method, path string, body
 func (c *apiClient) registerAccount(ctx context.Context, registrationID uint32) error {
 	body := struct {
 		SignalAccountAttributes AccountAttributes `json:"signal_account_attributes"`
+		DisableSignalProxy      bool
+		DisableWallet           bool
 	}{
-		AccountAttributes{RegistrationID: registrationID},
+		AccountAttributes{RegistrationID: registrationID}, true, true,
 	}
 
-	req, err := c.createRequest(ctx, "POST", "/accounts?disableproxy=true&disablewallet=true", body)
+	req, err := c.createRequest(ctx, "POST", "/api/accounts", body)
 	if err != nil {
 		return err
 	}
@@ -144,7 +146,7 @@ func (c *apiClient) addKeys(ctx context.Context, identityKey []byte, preKeys []P
 		identityKey, preKeys, signedPreKey,
 	}
 
-	req, err := c.createRequest(ctx, "PUT", "/keys", body)
+	req, err := c.createRequest(ctx, "PUT", "/api/messaging/keys", body)
 	if err != nil {
 		return err
 	}
@@ -174,7 +176,7 @@ func (c *apiClient) addKeys(ctx context.Context, identityKey []byte, preKeys []P
 }
 
 func (c *apiClient) getRecipientKey(ctx context.Context, recipientID string, deviceID uint32) (*PrekeyState, error) {
-	req, err := c.createRequest(ctx, "GET", fmt.Sprintf("/keys/%s/%d", recipientID, deviceID), nil)
+	req, err := c.createRequest(ctx, "GET", fmt.Sprintf("/api/messaging/keys/%s/%d", recipientID, deviceID), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -209,7 +211,7 @@ func (c *apiClient) getRecipientKey(ctx context.Context, recipientID string, dev
 }
 
 func (c *apiClient) getAvailablePreKeyCount(ctx context.Context) (int, error) {
-	req, err := c.createRequest(ctx, "GET", "/keys", nil)
+	req, err := c.createRequest(ctx, "GET", "/api/messaging/keys", nil)
 	if err != nil {
 		return 0, err
 	}
@@ -239,7 +241,7 @@ func (c *apiClient) sendMessages(ctx context.Context, recipientID string, msgs [
 		Messages:    msgs,
 		Timestamp:   ts,
 	}
-	req, err := c.createRequest(ctx, "PUT", fmt.Sprintf("/messages/%s", recipientID), messages)
+	req, err := c.createRequest(ctx, "PUT", fmt.Sprintf("/api/messaging/messages/%s", recipientID), messages)
 	if err != nil {
 		return err
 	}
@@ -269,7 +271,7 @@ func (c *apiClient) sendMessages(ctx context.Context, recipientID string, msgs [
 }
 
 func (c *apiClient) getMessages(ctx context.Context) ([]*Message, bool, error) {
-	req, err := c.createRequest(ctx, "GET", fmt.Sprintf("/messages"), nil)
+	req, err := c.createRequest(ctx, "GET", fmt.Sprintf("/api/messaging/messages"), nil)
 	if err != nil {
 		return nil, false, err
 	}
