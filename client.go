@@ -208,35 +208,48 @@ func (c *Client) ReceiveMessages() ([]*Message, bool, error) {
 	for _, m := range messages {
 		sc := axolotl.NewSessionCipher(c.identityStore, c.preKeyStore, c.signedPreKeyStore, c.sessionStore, m.Source, uint32(m.SourceDevice))
 
+	sw_type:
 		switch m.Type {
 		case messageTypeCiphertext:
 			wm, err := axolotl.LoadWhisperMessage(m.Content)
 			if err != nil {
-				return nil, false, err
+				m.Err = err
+				decryptedMessages = append(decryptedMessages, m)
+				break sw_type
 			}
 
 			plaintext, err := sc.SessionDecryptWhisperMessage(wm)
 			if err != nil {
-				return nil, false, err
+				m.Err = err
+				decryptedMessages = append(decryptedMessages, m)
+				break sw_type
 			}
 
 			m.Content = plaintext
+			m.Err = nil
 			decryptedMessages = append(decryptedMessages, m)
+
 		case messageTypePrekeyBundle:
 			pkwm, err := axolotl.LoadPreKeyWhisperMessage(m.Content)
 			if err != nil {
-				return nil, false, err
+				m.Err = err
+				decryptedMessages = append(decryptedMessages, m)
+				break sw_type
 			}
 
 			plaintext, err := sc.SessionDecryptPreKeyWhisperMessage(pkwm)
 			if err != nil {
-				return nil, false, err
+				m.Err = err
+				decryptedMessages = append(decryptedMessages, m)
+				break sw_type
 			}
 
 			m.Content = plaintext
+			m.Err = nil
 			decryptedMessages = append(decryptedMessages, m)
 		default:
-			return nil, false, errors.New("unsupported message type")
+			m.Err = errors.New("unsupported message type")
+			decryptedMessages = append(decryptedMessages, m)
 		}
 	}
 
