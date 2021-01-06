@@ -10,10 +10,10 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/signal-golang/textsecure/axolotl"
 	protobuf "github.com/signal-golang/textsecure/axolotl/protobuf"
 	"github.com/signal-golang/textsecure/curve25519sign"
+	"github.com/sirupsen/logrus"
 	"github.com/syndtr/goleveldb/leveldb"
 )
 
@@ -34,12 +34,21 @@ type Client struct {
 	preKeyStore       axolotl.PreKeyStore
 	signedPreKeyStore axolotl.SignedPreKeyStore
 	sessionStore      axolotl.SessionStore
+	log               *logrus.Entry
 }
 
 func New(httpClient *http.Client, endpoint, jwt, storePath string) *Client {
 	apiClient := newAPIClient(httpClient, endpoint, jwt)
 	store := newLevelDBAxolotlStore(storePath)
-	return &Client{apiClient, store, store, store, store, store}
+	return &Client{
+		apiClient:         apiClient,
+		privateKeyStore:   store,
+		identityStore:     store,
+		preKeyStore:       store,
+		signedPreKeyStore: store,
+		sessionStore:      store,
+		log:               logrus.WithField("prefix", "messaging_client"),
+	}
 }
 
 func (c *Client) RegisterAccount() error {
@@ -213,51 +222,43 @@ func (c *Client) ReceiveMessages() ([]*Message, bool, error) {
 		case messageTypeCiphertext:
 			wm, err := axolotl.LoadWhisperMessage(m.Content)
 			if err != nil {
-				m.Err = err
-				decryptedMessages = append(decryptedMessages, m)
+				c.log.WithError(err).Debug("LoadWhisperMessage")
 				break sw_type
 			}
 
 			plaintext, err := sc.SessionDecryptWhisperMessage(wm)
 			if err != nil {
-				m.Err = err
-				decryptedMessages = append(decryptedMessages, m)
+				c.log.WithError(err).Debug("SessionDecryptWhisperMessage")
 				break sw_type
 			}
 
 			m.Content = plaintext
-			m.Err = nil
 			decryptedMessages = append(decryptedMessages, m)
 
 		case messageTypePrekeyBundle:
 			pkwm, err := axolotl.LoadPreKeyWhisperMessage(m.Content)
 			if err != nil {
-				m.Err = err
-				decryptedMessages = append(decryptedMessages, m)
+				c.log.WithError(err).Debug("LoadPreKeyWhisperMessage")
 				break sw_type
 			}
 
 			plaintext, err := sc.SessionDecryptPreKeyWhisperMessage(pkwm)
 			if err != nil {
-				m.Err = err
-				decryptedMessages = append(decryptedMessages, m)
+				c.log.WithError(err).Debug("SessionDecryptPreKeyWhisperMessage")
 				break sw_type
 			}
 
 			m.Content = plaintext
-			m.Err = nil
 			decryptedMessages = append(decryptedMessages, m)
 		default:
-			m.Err = errors.New("unsupported message type")
-			decryptedMessages = append(decryptedMessages, m)
+			err = errors.New("unsupported message type")
+			c.log.WithError(err).Debug("message type decode")
 		}
+		err = c.apiClient.deleteMessage(context.Background(), m.Guid)
+		c.log.WithError(err).Debug("delete message")
 	}
 
 	return decryptedMessages, more, nil
-}
-
-func (c *Client) DeleteMessage(guid uuid.UUID) error {
-	return c.apiClient.deleteMessage(context.Background(), guid)
 }
 
 func generateRegistrationID() uint32 {

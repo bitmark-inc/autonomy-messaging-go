@@ -71,7 +71,6 @@ type Message struct {
 	DestRegistrationID uint32    `json:"destinationRegistrationId"`
 	Content            []byte    `json:"content"`
 	ServerTimestamp    int64     `json:"serverTimestamp"`
-	Err                error     `json:"-"`
 }
 
 func newAPIClient(httpClient *http.Client, endpoint, jwt string) *apiClient {
