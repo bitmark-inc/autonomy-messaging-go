@@ -118,6 +118,7 @@ func (c *apiClient) registerAccount(ctx context.Context, registrationID uint32) 
 	if err != nil {
 		return err
 	}
+	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
 		dumpedRequest, err := httputil.DumpRequest(req, true)
@@ -156,6 +157,7 @@ func (c *apiClient) addKeys(ctx context.Context, identityKey []byte, preKeys []P
 	if err != nil {
 		return err
 	}
+	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
 		dumpedRequest, err := httputil.DumpRequest(req, true)
@@ -186,6 +188,7 @@ func (c *apiClient) getRecipientKey(ctx context.Context, recipientID string, dev
 	if err != nil {
 		return nil, err
 	}
+	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
 		dumpedRequest, err := httputil.DumpRequest(req, true)
@@ -221,6 +224,7 @@ func (c *apiClient) getAvailablePreKeyCount(ctx context.Context) (int, error) {
 	if err != nil {
 		return 0, err
 	}
+	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
 		return 0, errors.New("unable to get keys")
@@ -251,6 +255,7 @@ func (c *apiClient) sendMessages(ctx context.Context, recipientID string, msgs [
 	if err != nil {
 		return err
 	}
+	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
 		dumpedRequest, err := httputil.DumpRequest(req, true)
