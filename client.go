@@ -68,6 +68,23 @@ func (c *Client) RegisterAccount() error {
 	return c.apiClient.registerAccount(context.Background(), registrationID)
 }
 
+func (c *Client) RegisterTemporaryAccount() error {
+	registrationID, err := c.identityStore.GetLocalRegistrationID()
+	if err != nil {
+		switch err {
+		case leveldb.ErrNotFound:
+			registrationID = generateRegistrationID()
+			if err := c.privateKeyStore.StoreRegistrationID(registrationID); err != nil {
+				return err
+			}
+		default:
+			return err
+		}
+	}
+
+	return c.apiClient.registerTemporaryAccount(context.Background(), registrationID)
+}
+
 func (c *Client) RegisterKeys() error {
 	identityKey, err := c.identityStore.GetIdentityKeyPair()
 	if err != nil {

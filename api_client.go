@@ -148,6 +148,43 @@ func (c *apiClient) registerAccount(ctx context.Context, registrationID uint32) 
 	return nil
 }
 
+func (c *apiClient) registerTemporaryAccount(ctx context.Context, registrationID uint32) error {
+	body := struct {
+		SignalAccountAttributes AccountAttributes `json:"signal_account_attributes"`
+	}{
+		AccountAttributes{RegistrationID: registrationID},
+	}
+
+	req, err := c.createRequest(ctx, "POST", "/api/recover", body)
+	if err != nil {
+		return err
+	}
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		dumpedRequest, err := httputil.DumpRequest(req, true)
+		if err != nil {
+			c.log.Error("unable to dump the request")
+		}
+		c.log.WithField("req", string(dumpedRequest)).Debug("unable to acquire a temporary messaging account")
+
+		dumpedResponse, err := httputil.DumpResponse(resp, true)
+		if err != nil {
+			c.log.Error("unable to dump the response")
+		}
+		c.log.WithContext(ctx).WithField("resp", string(dumpedResponse)).Debug("unable to acquire a temporary messaging account")
+
+		return errors.New("unable to acquire a temporary messaging account")
+	}
+
+	return nil
+}
+
 func (c *apiClient) addKeys(ctx context.Context, identityKey []byte, preKeys []*PreKey, signedPreKey *SignedPreKey) error {
 	identityKey = append([]byte{publicKeyVersion}, identityKey...)
 	for _, pk := range preKeys {
