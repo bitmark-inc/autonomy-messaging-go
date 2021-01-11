@@ -93,7 +93,7 @@ func (c *Client) RegisterKeys() error {
 	// generate pre keys
 	nextPreKeyID := randID()
 
-	preKeys := make([]PreKey, 0)
+	preKeys := make([]*PreKey, 0)
 	for i := 0; i < preKeyGenerationCount; i++ {
 		id := nextPreKeyID
 		preKey := axolotl.NewECKeyPair()
@@ -109,7 +109,7 @@ func (c *Client) RegisterKeys() error {
 		}
 
 		nextPreKeyID += 1
-		preKeys = append(preKeys, PreKey{ID: id, PublicKey: preKey.PublicKey.Key()[:]})
+		preKeys = append(preKeys, &PreKey{ID: id, PublicKey: preKey.PublicKey.Key()[:]})
 	}
 
 	// generate signed pre key
@@ -134,7 +134,7 @@ func (c *Client) RegisterKeys() error {
 	}
 
 	// send keys
-	if err := c.apiClient.addKeys(context.Background(), identityKey.PublicKey.Key()[:], preKeys, signedPreKey); err != nil {
+	if err := c.apiClient.addKeys(context.Background(), identityKey.PublicKey.Key()[:], preKeys, &signedPreKey); err != nil {
 		return err
 	}
 
@@ -162,12 +162,11 @@ func (c *Client) SendMessages(recipientID string, deviceID uint32, messages [][]
 			return fmt.Errorf("recipient device %d not exists", deviceID)
 		}
 
-		// TODO: determine key serialization format
 		pkb, err := axolotl.NewPreKeyBundle(
 			device.RegistrationID, device.ID,
-			device.PreKey.ID, axolotl.NewECPublicKey(device.PreKey.PublicKey),
-			int32(device.SignedPreKey.ID), axolotl.NewECPublicKey(device.SignedPreKey.PublicKey), device.SignedPreKey.Signature,
-			axolotl.NewIdentityKey(preKeyState.IdentityKey),
+			device.PreKey.ID, axolotl.NewECPublicKey(device.PreKey.PublicKey[1:]),
+			int32(device.SignedPreKey.ID), axolotl.NewECPublicKey(device.SignedPreKey.PublicKey[1:]), device.SignedPreKey.Signature,
+			axolotl.NewIdentityKey(preKeyState.IdentityKey[1:]),
 		)
 		if err != nil {
 			return err

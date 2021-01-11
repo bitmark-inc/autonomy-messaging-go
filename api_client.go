@@ -22,6 +22,10 @@ const (
 	messageTypeUnidentifiedSender
 )
 
+const (
+	publicKeyVersion = byte(5)
+)
+
 type apiClient struct {
 	httpClient *http.Client
 	endpoint   string
@@ -138,11 +142,17 @@ func (c *apiClient) registerAccount(ctx context.Context, registrationID uint32) 
 	return nil
 }
 
-func (c *apiClient) addKeys(ctx context.Context, identityKey []byte, preKeys []PreKey, signedPreKey SignedPreKey) error {
+func (c *apiClient) addKeys(ctx context.Context, identityKey []byte, preKeys []*PreKey, signedPreKey *SignedPreKey) error {
+	identityKey = append([]byte{publicKeyVersion}, identityKey...)
+	for _, pk := range preKeys {
+		pk.PublicKey = append([]byte{publicKeyVersion}, pk.PublicKey...)
+	}
+	signedPreKey.PublicKey = append([]byte{publicKeyVersion}, signedPreKey.PublicKey...)
+
 	body := struct {
-		IdentityKey  []byte       `json:"identityKey"`
-		PreKeys      []PreKey     `json:"preKeys"`
-		SignedPreKey SignedPreKey `json:"signedPreKey"`
+		IdentityKey  []byte        `json:"identityKey"`
+		PreKeys      []*PreKey     `json:"preKeys"`
+		SignedPreKey *SignedPreKey `json:"signedPreKey"`
 	}{
 		identityKey, preKeys, signedPreKey,
 	}
