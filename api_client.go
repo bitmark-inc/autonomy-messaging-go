@@ -108,12 +108,10 @@ func (c *apiClient) createRequest(ctx context.Context, method, path string, body
 func (c *apiClient) registerAccount(ctx context.Context, registrationID uint32) error {
 	body := struct {
 		SignalAccountAttributes AccountAttributes `json:"signal_account_attributes"`
-		DisableSignalProxy      bool
 		DisableWallet           bool
 		Invitation              string
 	}{
 		SignalAccountAttributes: AccountAttributes{RegistrationID: registrationID},
-		DisableSignalProxy:      true,
 		DisableWallet:           true,
 		Invitation:              store.MagicInvitationCode,
 	}
