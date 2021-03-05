@@ -16,12 +16,12 @@ import (
 )
 
 const (
-	messageTypeUnknown = iota
-	messageTypeCiphertext
-	messageTypeKeyExchange
-	messageTypePrekeyBundle
-	messageTypeReceipt
-	messageTypeUnidentifiedSender
+	MessageTypeUnknown = iota
+	MessageTypeCiphertext
+	MessageTypeKeyExchange
+	MessageTypePrekeyBundle
+	MessageTypeReceipt
+	MessageTypeUnidentifiedSender
 )
 
 const (

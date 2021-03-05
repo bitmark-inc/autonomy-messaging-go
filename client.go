@@ -158,15 +158,21 @@ func (c *Client) RegisterKeys() error {
 	return nil
 }
 
-func (c *Client) SendMessages(recipientID string, deviceID uint32, messages [][]byte) error {
+// SessionCipher returns a session cipher with a specific recipient id and device id
+func (c *Client) SessionCipher(recipientID string, deviceID uint32) *axolotl.SessionCipher {
+	return axolotl.NewSessionCipher(c.identityStore, c.preKeyStore, c.signedPreKeyStore, c.sessionStore, recipientID, deviceID)
+}
+
+// PrepareEncryptedMessages generates encrypted messages by local session and remote recipient key
+func (c *Client) PrepareEncryptedMessages(recipientID string, deviceID uint32, messages [][]byte) ([]Message, error) {
 	if !c.sessionStore.ContainsSession(recipientID, deviceID) {
 		preKeyState, err := c.apiClient.getRecipientKey(context.Background(), recipientID, deviceID)
 		if err != nil {
-			return err
+			return nil, err
 		}
 
 		if len(preKeyState.Devices) < 1 {
-			return errors.New("registration of recipient not completed")
+			return nil, errors.New("registration of recipient not completed")
 		}
 
 		device := new(Device)
@@ -176,7 +182,7 @@ func (c *Client) SendMessages(recipientID string, deviceID uint32, messages [][]
 			}
 		}
 		if device == nil {
-			return fmt.Errorf("recipient device %d not exists", deviceID)
+			return nil, fmt.Errorf("recipient device %d not exists", deviceID)
 		}
 
 		pkb, err := axolotl.NewPreKeyBundle(
@@ -186,26 +192,26 @@ func (c *Client) SendMessages(recipientID string, deviceID uint32, messages [][]
 			axolotl.NewIdentityKey(preKeyState.IdentityKey[1:]),
 		)
 		if err != nil {
-			return err
+			return nil, err
 		}
 
 		sb := axolotl.NewSessionBuilder(c.identityStore, c.preKeyStore, c.signedPreKeyStore, c.sessionStore, recipientID, deviceID)
 		if err = sb.BuildSenderSession(pkb); err != nil {
-			return err
+			return nil, err
 		}
 	}
 
 	sc := axolotl.NewSessionCipher(c.identityStore, c.preKeyStore, c.signedPreKeyStore, c.sessionStore, recipientID, deviceID)
 	registrationID, err := sc.GetRemoteRegistrationID()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	encryptedMessages := make([]Message, 0)
 	for _, m := range messages {
 		ciphertext, msgType, err := sc.SessionEncryptMessage(m)
 		if err != nil {
-			return err
+			return nil, err
 		}
 
 		encryptedMessages = append(encryptedMessages, Message{
@@ -214,6 +220,15 @@ func (c *Client) SendMessages(recipientID string, deviceID uint32, messages [][]
 			DestRegistrationID: registrationID,
 			Content:            ciphertext,
 		})
+	}
+
+	return encryptedMessages, nil
+}
+
+func (c *Client) SendMessages(recipientID string, deviceID uint32, messages [][]byte) error {
+	encryptedMessages, err := c.PrepareEncryptedMessages(recipientID, deviceID, messages)
+	if err != nil {
+		return err
 	}
 
 	if err := c.apiClient.sendMessages(context.Background(), recipientID, encryptedMessages, time.Now().Unix()); err != nil {
@@ -235,7 +250,7 @@ func (c *Client) ReceiveMessages() ([]*Message, bool, error) {
 
 	sw_type:
 		switch m.Type {
-		case messageTypeCiphertext:
+		case MessageTypeCiphertext:
 			wm, err := axolotl.LoadWhisperMessage(m.Content)
 			if err != nil {
 				c.log.WithError(err).Debug("LoadWhisperMessage")
@@ -251,7 +266,7 @@ func (c *Client) ReceiveMessages() ([]*Message, bool, error) {
 			m.Content = plaintext
 			decryptedMessages = append(decryptedMessages, m)
 
-		case messageTypePrekeyBundle:
+		case MessageTypePrekeyBundle:
 			pkwm, err := axolotl.LoadPreKeyWhisperMessage(m.Content)
 			if err != nil {
 				c.log.WithError(err).Debug("LoadPreKeyWhisperMessage")
