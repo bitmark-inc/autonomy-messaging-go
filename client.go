@@ -28,6 +28,8 @@ type PrivateKeyStore interface {
 }
 
 type Client struct {
+	endpoint          string
+	authToken         string
 	apiClient         *apiClient
 	privateKeyStore   PrivateKeyStore
 	identityStore     axolotl.IdentityStore
@@ -41,6 +43,8 @@ func New(httpClient *http.Client, endpoint, jwt, storePath string) *Client {
 	apiClient := newAPIClient(httpClient, endpoint, jwt)
 	store := newLevelDBAxolotlStore(storePath)
 	return &Client{
+		endpoint:          endpoint,
+		authToken:         jwt,
 		apiClient:         apiClient,
 		privateKeyStore:   store,
 		identityStore:     store,
