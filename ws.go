@@ -13,6 +13,8 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/signal-golang/textsecure/axolotl"
 	log "github.com/sirupsen/logrus"
+
+	"github.com/bitmark-inc/autonomy-wallet-server/schema"
 )
 
 type WSMessagingClient struct {
@@ -158,6 +160,28 @@ func (c *WSMessagingClient) closeChannels() {
 	}
 }
 
+// SendWhisperMessages is a shortcuts for send messages via websocket connection
+func (c *WSMessagingClient) SendWhisperMessages(to string, deviceID uint32, messages [][]byte) MessagingCommandResponse {
+	if deviceID == 0 {
+		deviceID = schema.MasterDeviceId
+	}
+
+	cipherMessages, err := c.messagingClient.PrepareEncryptedMessages(to, deviceID, messages)
+	if err != nil {
+		log.Panic(err)
+	}
+
+	return c.Command(MessagingCommand{
+		ID:      time.Now().String(),
+		Command: "send_messages",
+		Args: map[string]interface{}{
+			"destination": to,
+			"messages":    cipherMessages,
+			"ts":          time.Now().Unix(),
+		},
+	})
+}
+
 // Command sends messaging command through messaging websocket client
 func (c *WSMessagingClient) Command(cmd MessagingCommand) MessagingCommandResponse {
 	log.WithField("id", cmd).WithField("command", cmd.Command).Info("send command")
@@ -219,13 +243,13 @@ func (c *WSMessagingClient) WhisperMessages() <-chan *Message {
 				case MessageTypeCiphertext:
 					wm, err := axolotl.LoadWhisperMessage(m.Content)
 					if err != nil {
-						log.WithError(err).Debug("LoadWhisperMessage")
+						log.WithError(err).Error("LoadWhisperMessage")
 						break sw_type
 					}
 
 					plaintext, err := sc.SessionDecryptWhisperMessage(wm)
 					if err != nil {
-						log.WithError(err).Debug("SessionDecryptWhisperMessage")
+						log.WithError(err).Error("SessionDecryptWhisperMessage")
 						break sw_type
 					}
 
