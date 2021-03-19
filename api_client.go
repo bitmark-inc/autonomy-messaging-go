@@ -11,8 +11,6 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/sirupsen/logrus"
-
-	"github.com/bitmark-inc/autonomy-wallet-server/store"
 )
 
 const (
@@ -113,7 +111,6 @@ func (c *apiClient) registerAccount(ctx context.Context, registrationID uint32) 
 	}{
 		SignalAccountAttributes: AccountAttributes{RegistrationID: registrationID},
 		DisableWallet:           true,
-		Invitation:              store.MagicInvitationCode,
 	}
 
 	req, err := c.createRequest(ctx, "POST", "/api/accounts", body)
