@@ -177,7 +177,7 @@ func (c *WSMessagingClient) SendWhisperMessages(to string, deviceID uint32, mess
 		Args: map[string]interface{}{
 			"destination": to,
 			"messages":    cipherMessages,
-			"ts":          time.Now().Unix(),
+			"timestamp":   time.Now().Unix(),
 		},
 	})
 }
