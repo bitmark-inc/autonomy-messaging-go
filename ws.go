@@ -220,7 +220,7 @@ func (c *WSMessagingClient) WhisperMessages() <-chan *Message {
 	if c.decryptedMessageChan != nil {
 		return c.decryptedMessageChan
 	}
-	c.decryptedMessageChan = make(chan *Message)
+	c.decryptedMessageChan = make(chan *Message, 1000)
 
 	c.wg.Add(1)
 	go func() {
