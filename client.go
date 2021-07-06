@@ -60,6 +60,11 @@ func New(httpClient *http.Client, endpoint, jwt, storePath string) *Client {
 	}
 }
 
+// RefreshToken updates current authToken with a new value
+func (c *Client) RefreshToken(authToken string) {
+	c.authToken = authToken
+}
+
 func (c *Client) RegisterAccount() error {
 	registrationID, err := c.identityStore.GetLocalRegistrationID()
 	if err != nil {
