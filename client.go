@@ -30,6 +30,7 @@ const (
 type PrivateKeyStore interface {
 	StoreIdentityKeyPair(*axolotl.IdentityKeyPair) error
 	StoreRegistrationID(uint32) error
+	Close() error
 }
 
 type Client struct {
@@ -304,6 +305,11 @@ func (c *Client) ReceiveMessages() ([]*Message, bool, error) {
 	}
 
 	return decryptedMessages, more, nil
+}
+
+// Close will terminate the client gracefully
+func (c *Client) Close() error {
+	return c.privateKeyStore.Close()
 }
 
 func generateRegistrationID() uint32 {

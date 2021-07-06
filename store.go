@@ -28,6 +28,11 @@ func newLevelDBAxolotlStore(path string) *LevelDBAxolotlStore {
 	return s
 }
 
+// Close is to close the database
+func (l *LevelDBAxolotlStore) Close() error {
+	return l.db.Close()
+}
+
 //
 func (l *LevelDBAxolotlStore) StoreIdentityKeyPair(kp *axolotl.IdentityKeyPair) error {
 	data := make([]byte, 64)
