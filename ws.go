@@ -85,6 +85,19 @@ func (c *WSMessagingClient) readWSMessages() {
 	}
 	c.wsMessageChan = make(chan json.RawMessage)
 
+	// This routine send `PING` message to the server for every minutes
+	// which is to make sure the connection will be keepalived.
+	go func() {
+		for {
+			time.Sleep(time.Minute)
+			log.Debug("send PING message")
+			if err := c.wsConnection.WriteMessage(websocket.PingMessage, []byte("keepalived")); err != nil {
+				log.WithError(err).Error("unable to send PING message")
+				return
+			}
+		}
+	}()
+
 	c.wg.Add(1)
 	go func() {
 		defer c.wg.Done()
