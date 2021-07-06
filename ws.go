@@ -202,13 +202,16 @@ func (c *WSMessagingClient) SendWhisperMessages(to string, deviceID uint32, mess
 func (c *WSMessagingClient) Command(cmd MessagingCommand) MessagingCommandResponse {
 	log.WithField("id", cmd).WithField("command", cmd.Command).Info("send command")
 	defer log.WithField("id", cmd.ID).Debug("finish command")
-	cmd.ID = uuid.New().String()
-	c.wsConnection.WriteJSON(cmd)
 
 	respChan := make(chan MessagingCommandResponse)
 	defer close(respChan)
 
+	cmd.ID = uuid.New().String()
+	// the lock makes sure
+	// 1. no concurrent write to the command response map
+	// 2. no concurrent write to websocket connection
 	c.commandLock.Lock()
+	c.wsConnection.WriteJSON(cmd)
 	c.commandResponses[cmd.ID] = respChan
 	c.commandLock.Unlock()
 
