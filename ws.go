@@ -1,3 +1,8 @@
+// SPDX-License-Identifier: ISC
+// Copyright (c) 2019-2021 Bitmark Inc.
+// Use of this source code is governed by an ISC
+// license that can be found in the LICENSE file.
+
 package messaging
 
 import (
@@ -13,8 +18,6 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/signal-golang/textsecure/axolotl"
 	log "github.com/sirupsen/logrus"
-
-	"github.com/bitmark-inc/autonomy-wallet-server/schema"
 )
 
 type WSMessagingClient struct {
@@ -176,7 +179,7 @@ func (c *WSMessagingClient) closeChannels() {
 // SendWhisperMessages is a shortcuts for send messages via websocket connection
 func (c *WSMessagingClient) SendWhisperMessages(to string, deviceID uint32, messages [][]byte) MessagingCommandResponse {
 	if deviceID == 0 {
-		deviceID = schema.MasterDeviceId
+		deviceID = MasterDeviceId
 	}
 
 	cipherMessages, err := c.messagingClient.PrepareEncryptedMessages(to, deviceID, messages)
