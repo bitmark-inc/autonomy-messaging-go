@@ -184,7 +184,7 @@ func (c *WSMessagingClient) SendWhisperMessages(to string, deviceID uint32, mess
 
 	cipherMessages, err := c.messagingClient.PrepareEncryptedMessages(to, deviceID, messages)
 	if err != nil {
-		log.Panic(err)
+		return MessagingCommandResponse{Error: fmt.Sprintf("fail to prepare encrypted message payload. error: %s", err.Error())}
 	}
 
 	return c.Command(MessagingCommand{
@@ -211,7 +211,9 @@ func (c *WSMessagingClient) Command(cmd MessagingCommand) MessagingCommandRespon
 	// 1. no concurrent write to the command response map
 	// 2. no concurrent write to websocket connection
 	c.commandLock.Lock()
-	c.wsConnection.WriteJSON(cmd)
+	if err := c.wsConnection.WriteJSON(cmd); err != nil {
+		return MessagingCommandResponse{Error: err.Error()}
+	}
 	c.commandResponses[cmd.ID] = respChan
 	c.commandLock.Unlock()
 
